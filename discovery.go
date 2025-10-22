@@ -174,11 +174,11 @@ func (s *Service) getBroadcastAddress() (string, error) {
 
 		for _, addr := range addrs {
 			if ipnet, ok := addr.(*net.IPNet); ok {
-				if ipnet.IP.To4() != nil {
+				if ip4 := ipnet.IP.To4(); ip4 != nil {
 					// Calculate broadcast address
-					broadcast := make(net.IP, len(ipnet.IP))
-					for i := range ipnet.IP {
-						broadcast[i] = ipnet.IP[i] | ^ipnet.Mask[i]
+					broadcast := make(net.IP, len(ip4))
+					for i := range ip4 {
+						broadcast[i] = ip4[i] | ^ipnet.Mask[i]
 					}
 					return broadcast.String(), nil
 				}
