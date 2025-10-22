@@ -1,0 +1,15 @@
+---
+# Git Repository Configuration
+# IMPORTANT: Update this with your actual git repository URL
+clip_git_repo: "https://github.com/yourusername/clip.git"
+
+# Service Configuration
+# service_port: 8080  # Uncomment to override default port
+# service_id: "custom-id"  # Uncomment to set custom service ID (default: hostname)
+
+# Network Configuration
+# advertise_ip: "192.168.50.200"  # Uncomment to override auto-detected IP
+# seed_nodes: "http://192.168.50.201:8080,http://192.168.50.202:8080"  # Uncomment to add seed nodes
+
+# Go Version
+# go_version: "1.21.5"  # Uncomment to use different Go version

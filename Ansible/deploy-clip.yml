@@ -1,0 +1,173 @@
+---
+- name: Deploy Clip Golang Service to Raspberry Pi
+  hosts: myhosts
+  become: yes
+  vars:
+    git_repo: "{{ clip_git_repo }}"
+    app_name: "clip"
+    app_dir: "/opt/{{ app_name }}"
+    app_user: "clip"
+    service_id: "{{ ansible_hostname }}"
+    service_port: 8080
+    advertise_ip: "{{ ansible_default_ipv4.address }}"
+    seed_nodes: ""  # Optional: comma-separated list of seed nodes
+    go_version: "1.21.5"
+    
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      
+    - name: Install required packages
+      apt:
+        name:
+          - git
+          - wget
+          - tar
+          - ufw
+        state: present
+
+    - name: Check if Go is already installed
+      stat:
+        path: /usr/local/go/bin/go
+      register: go_binary
+
+    - name: Download Go
+      get_url:
+        url: "https://go.dev/dl/go{{ go_version }}.linux-arm64.tar.gz"
+        dest: "/tmp/go{{ go_version }}.linux-arm64.tar.gz"
+      when: not go_binary.stat.exists
+
+    - name: Remove old Go installation
+      file:
+        path: /usr/local/go
+        state: absent
+      when: not go_binary.stat.exists
+
+    - name: Extract Go
+      unarchive:
+        src: "/tmp/go{{ go_version }}.linux-arm64.tar.gz"
+        dest: /usr/local
+        remote_src: yes
+      when: not go_binary.stat.exists
+
+    - name: Add Go to PATH in profile
+      lineinfile:
+        path: /etc/profile.d/go.sh
+        line: 'export PATH=$PATH:/usr/local/go/bin'
+        create: yes
+        mode: '0644'
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ app_dir }}"
+        create_home: no
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Clone or update repository
+      git:
+        repo: "{{ git_repo }}"
+        dest: "{{ app_dir }}/src"
+        version: main
+        force: yes
+      become_user: "{{ app_user }}"
+      environment:
+        PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+
+    - name: Build Go application
+      shell: |
+        cd {{ app_dir }}/src
+        /usr/local/go/bin/go build -o {{ app_dir }}/{{ app_name }}
+      args:
+        creates: "{{ app_dir }}/{{ app_name }}"
+      become_user: "{{ app_user }}"
+      environment:
+        PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+        GOPATH: "{{ app_dir }}/go"
+
+    - name: Set executable permissions
+      file:
+        path: "{{ app_dir }}/{{ app_name }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Configure firewall - Allow HTTP port
+      ufw:
+        rule: allow
+        port: "{{ service_port }}"
+        proto: tcp
+        comment: "Clip HTTP API"
+
+    - name: Configure firewall - Allow UDP broadcast discovery
+      ufw:
+        rule: allow
+        port: '9999'
+        proto: udp
+        comment: "Clip broadcast discovery"
+
+    - name: Enable firewall
+      ufw:
+        state: enabled
+
+    - name: Create systemd service file
+      template:
+        src: clip.service.j2
+        dest: /etc/systemd/system/{{ app_name }}.service
+        mode: '0644'
+      notify:
+        - Reload systemd
+        - Restart clip service
+
+    - name: Enable and start service
+      systemd:
+        name: "{{ app_name }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Wait for service to be ready
+      wait_for:
+        port: "{{ service_port }}"
+        delay: 2
+        timeout: 30
+
+    - name: Check service status
+      uri:
+        url: "http://{{ advertise_ip }}:{{ service_port }}/status"
+        method: GET
+        return_content: yes
+      register: service_status
+      retries: 3
+      delay: 2
+
+    - name: Display service information
+      debug:
+        msg:
+          - "=== Clip Service Deployed Successfully ==="
+          - "Service ID: {{ service_id }}"
+          - "Address: http://{{ advertise_ip }}:{{ service_port }}"
+          - "Status endpoint: http://{{ advertise_ip }}:{{ service_port }}/status"
+          - "Peers endpoint: http://{{ advertise_ip }}:{{ service_port }}/peers"
+          - "Service is {{ service_status.status }} and responding"
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Restart clip service
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted

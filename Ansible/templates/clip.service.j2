@@ -1,0 +1,43 @@
+[Unit]
+Description=Clip - Distributed Network Service
+Documentation=https://github.com/your-repo/clip
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ app_user }}
+Group={{ app_user }}
+WorkingDirectory={{ app_dir }}
+
+# Service configuration
+ExecStart={{ app_dir }}/{{ app_name }} \
+    -id={{ service_id }} \
+    -address=0.0.0.0 \
+    -advertise={{ advertise_ip }} \
+    -port={{ service_port }}{% if seed_nodes %} \
+    -seeds={{ seed_nodes }}{% endif %}
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ app_dir }}
+
+# Resource limits
+LimitNOFILE=65536
+TasksMax=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier={{ app_name }}
+
+[Install]
+WantedBy=multi-user.target
