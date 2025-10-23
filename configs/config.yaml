@@ -1,0 +1,31 @@
+# Clip Configuration File
+# This file contains default configuration values for the Clip service
+
+service:
+  # Service identification
+  id: "clip-node"
+  
+  # Network configuration
+  bind_address: "0.0.0.0"
+  port: 8080
+  
+  # Discovery configuration
+  discovery:
+    broadcast_port: 9999
+    broadcast_interval: "10s"
+    heartbeat_interval: "5s"
+    peer_timeout: "15s"
+    gossip_interval: "10s"
+  
+  # Seed nodes for initial discovery (optional)
+  seed_nodes: []
+  
+  # Logging configuration
+  logging:
+    level: "info"  # debug, info, warn, error
+    format: "text"  # text, json
+
+# Example seed nodes configuration:
+# seed_nodes:
+#   - "http://192.168.1.100:8080"
+#   - "http://192.168.1.101:8080"
