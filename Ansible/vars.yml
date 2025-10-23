@@ -1,7 +1,7 @@
 ---
 # Git Repository Configuration
 # IMPORTANT: Update this with your actual git repository URL
-clip_git_repo: "https://github.com/yourusername/clip.git"
+clip_git_repo: "https://github.com/RokZabukovec/vigilant-meme.git"
 
 # Service Configuration
 # service_port: 8080  # Uncomment to override default port
