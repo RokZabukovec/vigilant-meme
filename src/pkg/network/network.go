@@ -48,9 +48,20 @@ func GetBroadcastAddress(ip net.IP, mask net.IPMask) net.IP {
 		return nil
 	}
 
-	broadcast := make(net.IP, len(ip))
-	for i := range ip {
-		broadcast[i] = ip[i] | ^mask[i]
+	// Convert to IPv4 format
+	ip4 := ip.To4()
+	if ip4 == nil {
+		return nil
+	}
+
+	// Ensure mask length matches IPv4 length (4 bytes)
+	if len(mask) != 4 {
+		return nil
+	}
+
+	broadcast := make(net.IP, 4)
+	for i := 0; i < 4; i++ {
+		broadcast[i] = ip4[i] | ^mask[i]
 	}
 	return broadcast
 }

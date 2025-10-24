@@ -26,28 +26,30 @@ type BroadcastMessage struct {
 
 // DiscoveryService handles peer discovery via UDP broadcast
 type DiscoveryService struct {
-	serviceID   string
-	serviceAddr string
-	servicePort int
-	stopChan    chan struct{}
-	onPeerFound func(id, address string)
+	serviceID     string
+	serviceAddr   string
+	servicePort   int
+	broadcastPort int
+	stopChan      chan struct{}
+	onPeerFound   func(id, address string)
 }
 
 // NewDiscoveryService creates a new discovery service
-func NewDiscoveryService(serviceID, serviceAddr string, servicePort int, onPeerFound func(id, address string)) *DiscoveryService {
+func NewDiscoveryService(serviceID, serviceAddr string, servicePort, broadcastPort int, onPeerFound func(id, address string)) *DiscoveryService {
 	return &DiscoveryService{
-		serviceID:   serviceID,
-		serviceAddr: serviceAddr,
-		servicePort: servicePort,
-		stopChan:    make(chan struct{}),
-		onPeerFound: onPeerFound,
+		serviceID:     serviceID,
+		serviceAddr:   serviceAddr,
+		servicePort:   servicePort,
+		broadcastPort: broadcastPort,
+		stopChan:      make(chan struct{}),
+		onPeerFound:   onPeerFound,
 	}
 }
 
 // StartBroadcastListener starts listening for broadcast messages from other peers
 func (ds *DiscoveryService) StartBroadcastListener() {
 	addr := net.UDPAddr{
-		Port: BroadcastPort,
+		Port: ds.broadcastPort,
 		IP:   net.IPv4zero,
 	}
 
@@ -58,7 +60,7 @@ func (ds *DiscoveryService) StartBroadcastListener() {
 		return
 	}
 
-	log.Printf("Broadcast discovery listener started on port %d", BroadcastPort)
+	log.Printf("Broadcast discovery listener started on port %d", ds.broadcastPort)
 
 	go func() {
 		defer conn.Close()
@@ -150,7 +152,7 @@ func (ds *DiscoveryService) sendBroadcast(broadcastAddr string) {
 		return
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", broadcastAddr, BroadcastPort))
+	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", broadcastAddr, ds.broadcastPort))
 	if err != nil {
 		log.Printf("Error resolving broadcast address: %v", err)
 		return

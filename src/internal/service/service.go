@@ -55,6 +55,7 @@ func NewService(cfg *config.Config) *Service {
 		cfg.ID,
 		serviceAddr,
 		cfg.Port,
+		cfg.BroadcastPort,
 		func(id, address string) {
 			// Callback when a peer is discovered via broadcast
 			p := &peer.Peer{
@@ -106,7 +107,13 @@ func (s *Service) Start() error {
 
 // Stop stops the service
 func (s *Service) Stop() {
-	close(s.stopChan)
+	select {
+	case <-s.stopChan:
+		// Already stopped
+		return
+	default:
+		close(s.stopChan)
+	}
 	s.discovery.Stop()
 }
 

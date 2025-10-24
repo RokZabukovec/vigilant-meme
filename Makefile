@@ -21,7 +21,7 @@ LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 VERSION=$(shell git describe --tags --always --dirty)
 BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
 
-.PHONY: all build clean test deps fmt vet lint run help install
+.PHONY: all build clean test test-coverage test-all test-race test-bench test-pkg deps fmt vet lint run help install
 
 # Default target
 all: clean deps fmt vet test build
@@ -61,6 +61,27 @@ test-coverage:
 	cd $(SRC_DIR) && $(GOTEST) -v -coverprofile=coverage.out ./...
 	cd $(SRC_DIR) && $(GOCMD) tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: $(SRC_DIR)/coverage.html"
+
+# Run comprehensive tests with race detection and benchmarks
+test-all:
+	@echo "Running comprehensive tests..."
+	cd $(SRC_DIR) && ./run_tests.sh
+
+# Run tests with race detection
+test-race:
+	@echo "Running tests with race detection..."
+	cd $(SRC_DIR) && $(GOTEST) -race ./...
+
+# Run benchmark tests
+test-bench:
+	@echo "Running benchmark tests..."
+	cd $(SRC_DIR) && $(GOTEST) -bench=. ./...
+
+# Run tests for specific package
+test-pkg:
+	@echo "Running tests for package: $(PKG)"
+	@if [ -z "$(PKG)" ]; then echo "Usage: make test-pkg PKG=package_name"; exit 1; fi
+	cd $(SRC_DIR) && $(GOTEST) -v ./$(PKG)
 
 # Download dependencies
 deps:
@@ -143,6 +164,10 @@ help:
 	@echo "  clean        - Clean build artifacts"
 	@echo "  test         - Run tests"
 	@echo "  test-coverage- Run tests with coverage report"
+	@echo "  test-all     - Run comprehensive tests with race detection and benchmarks"
+	@echo "  test-race    - Run tests with race detection"
+	@echo "  test-bench   - Run benchmark tests"
+	@echo "  test-pkg     - Run tests for specific package (PKG=package_name)"
 	@echo "  deps         - Download and tidy dependencies"
 	@echo "  fmt          - Format code"
 	@echo "  vet          - Run go vet"
